@@ -1,0 +1,76 @@
+:root {
+  --srv-bg:           #0F1419;
+  --srv-surface:      #1A2332;
+  --srv-surface2:     #22304A;
+  --srv-accent:       #8B5CF6;
+  --srv-accent-soft:  #A78BFA;
+  --srv-text:         #F0F4F8;
+  --srv-text-sub:     #8B95A5;
+  --srv-text-muted:   #5A6470;
+  --srv-ok:           #10B981;
+  --srv-warn:         #F59E0B;
+  --srv-crit:         #EF4444;
+  --srv-info:         #8B5CF6;
+  --srv-border:       rgba(255,255,255,0.07);
+  --srv-border-soft:  rgba(255,255,255,0.12);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--srv-bg);
+    color: var(--srv-text);
+    font-family: Inter, -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  * { scrollbar-width: none; }
+
+  input, button, textarea { font-family: inherit; color: var(--srv-text); }
+  input::placeholder { color: var(--srv-text-muted); }
+
+  .safe-top    { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+}
+
+@layer components {
+  .screen {
+    @apply h-full flex flex-col overflow-hidden bg-srv-bg text-srv-text;
+  }
+
+  .scroll-area {
+    @apply flex-1 overflow-y-auto overflow-x-hidden;
+  }
+
+  .card {
+    @apply bg-srv-surface rounded-12 border border-white/[0.07];
+  }
+
+  .btn-primary {
+    @apply h-12 rounded-12 bg-srv-accent text-white font-medium text-base
+           flex items-center justify-center gap-2 cursor-pointer border-none
+           active:opacity-90 transition-opacity;
+    box-shadow: 0 4px 16px rgba(139,92,246,0.35);
+  }
+
+  .btn-secondary {
+    @apply h-12 rounded-12 bg-srv-bg text-srv-text font-medium text-base
+           flex items-center justify-center gap-2 cursor-pointer
+           border border-white/[0.07] active:opacity-80 transition-opacity;
+  }
+
+  .label {
+    @apply text-xs font-medium text-srv-text-sub tracking-[0.3px] uppercase;
+  }
+}
