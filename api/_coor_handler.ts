@@ -179,7 +179,7 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
 
     const byTecnico: Record<string, { total: number; en_proceso: number; tickets: unknown[] }> = {};
     for (const t of (tickets ?? [])) {
-      const at = t.asignado_a as string;
+      const at = (t.asignado_a as string).toLowerCase();
       if (!byTecnico[at]) byTecnico[at] = { total: 0, en_proceso: 0, tickets: [] };
       byTecnico[at].total++;
       const estado = t.estado as string;
@@ -190,9 +190,9 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
     const tecnicos = (tecnicoRows ?? []).map(t => ({
       codigo_tecnico:      t.codigo_tecnico as string,
       nombre_tecnico:      t.nombre as string,
-      tickets_asignados:   byTecnico[t.codigo_tecnico as string]?.total ?? 0,
-      tickets_en_proceso:  byTecnico[t.codigo_tecnico as string]?.en_proceso ?? 0,
-      tickets:             byTecnico[t.codigo_tecnico as string]?.tickets ?? [],
+      tickets_asignados:   byTecnico[(t.codigo_tecnico as string).toLowerCase()]?.total ?? 0,
+      tickets_en_proceso:  byTecnico[(t.codigo_tecnico as string).toLowerCase()]?.en_proceso ?? 0,
+      tickets:             byTecnico[(t.codigo_tecnico as string).toLowerCase()]?.tickets ?? [],
     })).sort((a, b) => b.tickets_asignados - a.tickets_asignados);
 
     return { tecnicos };
@@ -341,7 +341,8 @@ export async function handlePost(body: Record<string, unknown>): Promise<unknown
     if (!codigoDestino) throw Object.assign(new Error('Técnico destino requerido'), { statusCode: 400 });
 
     for (const id_servicio of tickets) {
-      await db().from('servicios').update({ asignado_a: codigoDestino }).eq('id_servicio', id_servicio);
+      const { error: updateErr } = await db().from('servicios').update({ asignado_a: codigoDestino }).eq('id_servicio', id_servicio);
+      if (updateErr) throw Object.assign(new Error(`Error al reasignar ticket ${id_servicio}: ${updateErr.message}`), { statusCode: 500 });
       const { data: srv } = await db().from('servicios').select('codigo_tienda').eq('id_servicio', id_servicio).single();
       if (srv) {
         await db().from('bitacora').insert({
