@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAppStore } from '../store/app';
-import BottomNav from '../components/BottomNav';
 import Spinner from '../components/Spinner';
 
 interface TiendaRow {
@@ -43,7 +42,7 @@ export default function Resumen() {
   return (
     <div className="screen">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 safe-top flex items-center justify-between flex-shrink-0">
+      <div className="pl-14 pr-4 pt-4 pb-3 safe-top flex items-center justify-between flex-shrink-0">
         <div>
           <p className="text-xs text-srv-text-muted">Bienvenido,</p>
           <button
@@ -111,7 +110,6 @@ export default function Resumen() {
         )}
       </div>
 
-      <BottomNav />
     </div>
   );
 }

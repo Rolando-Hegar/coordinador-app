@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAppStore } from '../store/app';
-import BottomNav from '../components/BottomNav';
 import Spinner from '../components/Spinner';
 
 interface EncargadaRow {
@@ -48,7 +47,7 @@ export default function Encargadas() {
 
   return (
     <div className="screen">
-      <div className="px-4 pt-4 pb-3 safe-top flex-shrink-0">
+      <div className="pl-14 pr-4 pt-4 pb-3 safe-top flex-shrink-0">
         <p className="text-xs text-srv-text-muted">Actividad</p>
         <p className="text-xl font-semibold text-srv-text">Encargadas</p>
       </div>
@@ -102,7 +101,6 @@ export default function Encargadas() {
         </div>
       </div>
 
-      <BottomNav />
     </div>
   );
 }

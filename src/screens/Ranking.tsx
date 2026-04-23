@@ -38,7 +38,7 @@ export default function Ranking() {
 
   return (
     <div className="screen">
-      <div className="px-4 pt-4 pb-3 safe-top flex items-center gap-3 flex-shrink-0">
+      <div className="pl-14 pr-4 pt-4 pb-3 safe-top flex items-center gap-3 flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 rounded-10 bg-srv-surface flex items-center justify-center border border-white/[0.07] cursor-pointer flex-shrink-0"
