@@ -13,6 +13,17 @@ interface Ticket {
   estado:         string;
 }
 
+const ESTADO_LABEL: Record<string, { label: string; className: string }> = {
+  nuevo:                   { label: 'Nuevo',          className: 'text-srv-text-muted' },
+  en_proceso:              { label: 'En proceso',     className: 'text-srv-accent' },
+  pendiente_confirmacion:  { label: 'Por confirmar',  className: 'text-amber-400' },
+};
+
+function EstadoBadge({ estado }: { estado: string }) {
+  const { label, className } = ESTADO_LABEL[estado] ?? { label: estado, className: 'text-srv-text-muted' };
+  return <span className={`font-medium ${className}`}>{label}</span>;
+}
+
 interface Tecnico {
   codigo_tecnico:     string;
   nombre_tecnico:     string;
@@ -147,7 +158,7 @@ export default function Tecnicos() {
                                 <span className="font-mono text-srv-accent">{tk.codigo_maquina}</span>
                                 {' · '}{tk.tipo_servicio}
                               </p>
-                              <p className="text-xs text-srv-text-muted truncate">{tk.codigo_tienda} · {tk.estado}</p>
+                              <p className="text-xs text-srv-text-muted truncate">{tk.codigo_tienda} · <EstadoBadge estado={tk.estado} /></p>
                             </div>
                           </label>
                         ))}
