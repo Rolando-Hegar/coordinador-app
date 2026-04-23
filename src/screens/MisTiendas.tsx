@@ -4,6 +4,22 @@ import { useAppStore } from '../store/app';
 import BottomNav from '../components/BottomNav';
 import Spinner from '../components/Spinner';
 
+interface TicketAbierto {
+  id_servicio:    string;
+  codigo_maquina: string;
+  tipo_servicio:  string;
+  estado:         string;
+  nombre_tecnico: string | null;
+  fecha_reporte:  string | null;
+}
+
+interface HistorialItem {
+  codigo_maquina:  string;
+  tipo_servicio:   string;
+  nombre_tecnico:  string | null;
+  fecha_resolucion: string | null;
+}
+
 interface Recurrente { codigo_maquina: string; count: number; }
 
 interface TiendaDetalle {
@@ -13,6 +29,25 @@ interface TiendaDetalle {
   maquinas_falla:   number;
   tickets_abiertos: number;
   recurrentes:      Recurrente[];
+  tickets:          TicketAbierto[];
+  historial:        HistorialItem[];
+}
+
+const ESTADO_INFO: Record<string, { label: string; cls: string }> = {
+  nuevo:                  { label: 'Nuevo',         cls: 'text-srv-text-muted' },
+  en_proceso:             { label: 'En proceso',    cls: 'text-srv-accent' },
+  pendiente_confirmacion: { label: 'Por confirmar', cls: 'text-amber-400' },
+};
+
+function relativeTime(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  return `hace ${days} día${days !== 1 ? 's' : ''}`;
 }
 
 export default function MisTiendas() {
@@ -58,7 +93,6 @@ export default function MisTiendas() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-srv-text text-sm truncate">{t.nombre_tienda}</p>
                   <p className="text-xs text-srv-text-muted mt-0.5">{t.codigo_tienda}</p>
-                  {/* Quick badges */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <Badge label={`${t.total_maquinas} máq`} />
                     {t.tickets_abiertos > 0
@@ -76,13 +110,79 @@ export default function MisTiendas() {
                 </svg>
               </button>
 
-              {/* Expanded: recurring failures */}
+              {/* Expanded detail */}
               {expanded === t.codigo_tienda && (
-                <div className="border-t border-white/[0.07] px-4 py-3">
-                  {t.recurrentes.length === 0 ? (
-                    <p className="text-sm text-srv-text-muted">Sin fallas recurrentes en los últimos 30 días.</p>
-                  ) : (
-                    <>
+                <div className="border-t border-white/[0.07] divide-y divide-white/[0.05]">
+
+                  {/* Tickets abiertos */}
+                  <div className="px-4 py-3">
+                    <p className="label mb-2">Tickets abiertos</p>
+                    {t.tickets.length === 0 ? (
+                      <p className="text-sm text-srv-text-muted">Sin tickets abiertos.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {t.tickets.map(tk => {
+                          const ei = ESTADO_INFO[tk.estado] ?? { label: tk.estado, cls: 'text-srv-text-muted' };
+                          return (
+                            <div key={tk.id_servicio} className="flex items-start justify-between gap-2 py-1">
+                              <div className="min-w-0">
+                                <p className="text-sm text-srv-text">
+                                  <span className="font-mono text-srv-accent">{tk.codigo_maquina}</span>
+                                  <span className="text-srv-text-sub"> · {tk.tipo_servicio}</span>
+                                </p>
+                                <p className="text-xs mt-0.5">
+                                  <span className={`font-medium ${ei.cls}`}>{ei.label}</span>
+                                  {tk.nombre_tecnico && (
+                                    <span className="text-srv-text-muted"> · {tk.nombre_tecnico}</span>
+                                  )}
+                                  {!tk.nombre_tecnico && (
+                                    <span className="text-srv-text-muted"> · Sin asignar</span>
+                                  )}
+                                </p>
+                              </div>
+                              <span className="text-xs text-srv-text-muted flex-shrink-0 mt-0.5">
+                                {relativeTime(tk.fecha_reporte)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Historial reciente */}
+                  <div className="px-4 py-3">
+                    <p className="label mb-2">Historial reciente</p>
+                    {t.historial.length === 0 ? (
+                      <p className="text-sm text-srv-text-muted">Sin resoluciones en los últimos 30 días.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {t.historial.map((h, i) => (
+                          <div key={i} className="flex items-start justify-between gap-2 py-1">
+                            <div className="min-w-0 flex items-start gap-2">
+                              <span className="text-srv-ok mt-0.5 flex-shrink-0">✓</span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-srv-text">
+                                  <span className="font-mono text-srv-accent">{h.codigo_maquina}</span>
+                                  <span className="text-srv-text-sub"> · {h.tipo_servicio}</span>
+                                </p>
+                                {h.nombre_tecnico && (
+                                  <p className="text-xs text-srv-text-muted mt-0.5">{h.nombre_tecnico}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xs text-srv-text-muted flex-shrink-0 mt-0.5">
+                              {relativeTime(h.fecha_resolucion)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fallas recurrentes (si hay) */}
+                  {t.recurrentes.length > 0 && (
+                    <div className="px-4 py-3">
                       <p className="label mb-2">⚠ Fallas recurrentes (30 días)</p>
                       <div className="flex flex-col gap-1.5">
                         {t.recurrentes.map(r => (
@@ -94,8 +194,9 @@ export default function MisTiendas() {
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+
                 </div>
               )}
             </div>

@@ -110,12 +110,30 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
       { data: maquinas },
       { data: serviciosActivos },
       { data: serviciosRecientes },
+      { data: serviciosResueltos },
+      { data: tecnicoRows },
     ] = await Promise.all([
       db().from('tiendas').select('codigo_tienda, nombre_tienda').in('codigo_tienda', tiendas).eq('activa', true),
       db().from('maquinas').select('codigo_tienda, estado').in('codigo_tienda', tiendas).eq('activa', true),
-      db().from('servicios').select('codigo_tienda').in('codigo_tienda', tiendas).neq('estado', 'resuelto'),
+      db().from('servicios')
+        .select('id_servicio, codigo_tienda, codigo_maquina, tipo_servicio, estado, asignado_a, fecha_reporte')
+        .in('codigo_tienda', tiendas).neq('estado', 'resuelto')
+        .order('fecha_reporte', { ascending: false }),
       db().from('servicios').select('codigo_tienda, codigo_maquina').in('codigo_tienda', tiendas).gte('fecha_reporte', since),
+      db().from('servicios')
+        .select('codigo_tienda, codigo_maquina, tipo_servicio, asignado_a, fecha_resolucion')
+        .in('codigo_tienda', tiendas).eq('estado', 'resuelto')
+        .gte('fecha_resolucion', since)
+        .order('fecha_resolucion', { ascending: false })
+        .limit(30),
+      db().from('tecnicos').select('codigo_tecnico, nombre').eq('activo', true),
     ]);
+
+    // technician name lookup
+    const tecNombre: Record<string, string> = {};
+    for (const t of (tecnicoRows ?? [])) {
+      tecNombre[(t.codigo_tecnico as string).toLowerCase()] = t.nombre as string;
+    }
 
     // aggregate machines
     const totalMaq: Record<string, number> = {};
@@ -126,10 +144,40 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
       if (m.estado !== 'ok') fallaMaq[ct] = (fallaMaq[ct] ?? 0) + 1;
     }
 
+    // open tickets count + full detail per store
     const abiertos: Record<string, number> = {};
+    const ticketsPorTienda: Record<string, unknown[]> = {};
     for (const s of (serviciosActivos ?? [])) {
       const ct = s.codigo_tienda as string;
       abiertos[ct] = (abiertos[ct] ?? 0) + 1;
+      if (!ticketsPorTienda[ct]) ticketsPorTienda[ct] = [];
+      ticketsPorTienda[ct].push({
+        id_servicio:    s.id_servicio,
+        codigo_maquina: s.codigo_maquina,
+        tipo_servicio:  s.tipo_servicio,
+        estado:         s.estado,
+        nombre_tecnico: s.asignado_a
+          ? (tecNombre[(s.asignado_a as string).toLowerCase()] ?? s.asignado_a)
+          : null,
+        fecha_reporte:  s.fecha_reporte,
+      });
+    }
+
+    // historial: last 5 resolved per store
+    const historialPorTienda: Record<string, unknown[]> = {};
+    for (const s of (serviciosResueltos ?? [])) {
+      const ct = s.codigo_tienda as string;
+      if (!historialPorTienda[ct]) historialPorTienda[ct] = [];
+      if ((historialPorTienda[ct] as unknown[]).length < 5) {
+        historialPorTienda[ct].push({
+          codigo_maquina:  s.codigo_maquina,
+          tipo_servicio:   s.tipo_servicio,
+          nombre_tecnico:  s.asignado_a
+            ? (tecNombre[(s.asignado_a as string).toLowerCase()] ?? s.asignado_a)
+            : null,
+          fecha_resolucion: s.fecha_resolucion,
+        });
+      }
     }
 
     // recurring failures: machines with 3+ tickets in last 30 days
@@ -151,12 +199,14 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
     }
 
     const rows = (tiendaRows ?? []).map(t => ({
-      codigo_tienda:   t.codigo_tienda as string,
-      nombre_tienda:   t.nombre_tienda as string,
-      total_maquinas:  totalMaq[t.codigo_tienda as string] ?? 0,
-      maquinas_falla:  fallaMaq[t.codigo_tienda as string] ?? 0,
+      codigo_tienda:    t.codigo_tienda as string,
+      nombre_tienda:    t.nombre_tienda as string,
+      total_maquinas:   totalMaq[t.codigo_tienda as string] ?? 0,
+      maquinas_falla:   fallaMaq[t.codigo_tienda as string] ?? 0,
       tickets_abiertos: abiertos[t.codigo_tienda as string] ?? 0,
-      recurrentes:     recurrentes[t.codigo_tienda as string] ?? [],
+      recurrentes:      recurrentes[t.codigo_tienda as string] ?? [],
+      tickets:          ticketsPorTienda[t.codigo_tienda as string] ?? [],
+      historial:        historialPorTienda[t.codigo_tienda as string] ?? [],
     }));
 
     return { tiendas: rows };
