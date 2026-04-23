@@ -20,7 +20,7 @@ function allowRequest(ip: string): boolean {
 }
 
 const ALLOWED_ORIGINS = [
-  'https://coordinador-app.vercel.app',   // update once domain is known
+  'https://coordinador-app.vercel.app',
   'https://servicio-app.vercel.app',
 ];
 
