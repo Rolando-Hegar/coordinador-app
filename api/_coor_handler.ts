@@ -371,6 +371,30 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
     return { ranking };
   }
 
+  // ── Cambios de base ───────────────────────────────────────────────────────
+  if (action === 'getCambios') {
+    const tiendas = parseTiendas(params.get('tiendas'));
+    if (!tiendas.length) return { cambios: [], tecnicosPorTienda: {} };
+
+    const [{ data: cambiosRows }, { data: relaciones }] = await Promise.all([
+      db().from('cambios').select('*').in('codigo_tienda', tiendas)
+        .order('fecha_solicitud', { ascending: false }).limit(100),
+      db().from('tecnico_tiendas').select('codigo_tienda, codigo_tecnico, tecnicos(nombre)')
+        .in('codigo_tienda', tiendas),
+    ]);
+
+    const tecnicosPorTienda: Record<string, { codigo_tecnico: string; nombre: string }[]> = {};
+    for (const r of (relaciones ?? [])) {
+      const ct = r.codigo_tienda as string;
+      if (!tecnicosPorTienda[ct]) tecnicosPorTienda[ct] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tec = r.tecnicos as any;
+      if (tec) tecnicosPorTienda[ct].push({ codigo_tecnico: r.codigo_tecnico as string, nombre: tec.nombre as string });
+    }
+
+    return { cambios: cambiosRows ?? [], tecnicosPorTienda };
+  }
+
   throw new Error(`Acción GET desconocida: ${action}`);
 }
 
@@ -408,6 +432,32 @@ export async function handlePost(body: Record<string, unknown>): Promise<unknown
       }
     }
     return { ok: true, reasignados: tickets.length };
+  }
+
+  // ── Cambios de base ───────────────────────────────────────────────────────
+  if (action === 'autorizarCambio') {
+    const now = nowMexico();
+    const { error } = await db().from('cambios').update({
+      estado: 'autorizado',
+      autorizado_por:     data.autorizado_por,
+      fecha_autorizacion: now,
+      asignado_a:         (data.asignado_a as string).toUpperCase().trim(),
+      nombre_tecnico:     data.nombre_tecnico ?? null,
+    }).eq('id_cambio', data.id_cambio);
+    if (error) throw Object.assign(new Error(error.message), { statusCode: 500 });
+    return { ok: true };
+  }
+
+  if (action === 'rechazarCambio') {
+    const now = nowMexico();
+    const { error } = await db().from('cambios').update({
+      estado: 'rechazado',
+      autorizado_por:     data.autorizado_por,
+      fecha_autorizacion: now,
+      motivo_rechazo:     data.motivo_rechazo ?? '',
+    }).eq('id_cambio', data.id_cambio);
+    if (error) throw Object.assign(new Error(error.message), { statusCode: 500 });
+    return { ok: true };
   }
 
   throw new Error(`Acción POST desconocida: ${action}`);
