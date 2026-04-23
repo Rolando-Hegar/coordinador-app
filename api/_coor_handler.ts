@@ -167,7 +167,7 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
     const tiendas = parseTiendas(params.get('tiendas'));
 
     const [{ data: tecnicoRows }, { data: tickets }] = await Promise.all([
-      db().from('tecnicos').select('codigo_tecnico, nombre_tecnico').eq('activo', true),
+      db().from('tecnicos').select('codigo_tecnico, nombre').eq('activo', true),
       tiendas.length
         ? db().from('servicios')
             .select('id_servicio, asignado_a, estado, codigo_tienda, codigo_maquina, tipo_servicio, descripcion')
@@ -189,7 +189,7 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
 
     const tecnicos = (tecnicoRows ?? []).map(t => ({
       codigo_tecnico:      t.codigo_tecnico as string,
-      nombre_tecnico:      t.nombre_tecnico as string,
+      nombre_tecnico:      t.nombre as string,
       tickets_asignados:   byTecnico[t.codigo_tecnico as string]?.total ?? 0,
       tickets_en_proceso:  byTecnico[t.codigo_tecnico as string]?.en_proceso ?? 0,
       tickets:             byTecnico[t.codigo_tecnico as string]?.tickets ?? [],
@@ -276,7 +276,7 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
     const qAbiertos  = db().from('servicios').select('asignado_a').neq('estado', 'resuelto').not('asignado_a', 'is', null);
 
     const [{ data: tecnicoRows }, { data: resueltos }, { data: abiertos }] = await Promise.all([
-      db().from('tecnicos').select('codigo_tecnico, nombre_tecnico').eq('activo', true),
+      db().from('tecnicos').select('codigo_tecnico, nombre').eq('activo', true),
       tiendas.length ? qResueltos.in('codigo_tienda', tiendas) : qResueltos,
       tiendas.length ? qAbiertos.in('codigo_tienda', tiendas)  : qAbiertos,
     ]);
@@ -305,7 +305,7 @@ export async function handleGet(params: URLSearchParams): Promise<unknown> {
           : null;
         return {
           codigo_tecnico:   ct,
-          nombre_tecnico:   t.nombre_tecnico as string,
+          nombre_tecnico:   t.nombre as string,
           resueltos_mes:    d.resueltos,
           avg_duracion_min: avg,
           tasa_completado:  total > 0 ? Math.round((d.resueltos / total) * 100) : null,
